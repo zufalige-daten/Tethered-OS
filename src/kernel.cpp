@@ -1,9 +1,11 @@
 #define uint8 unsigned char
 #define uint16 unsigned short
 #define uint32 unsigned int
-#define uint64 unsigned long
+
+uint32 K_LFB = 0;
 
 void startup(){
+    asm("mov %[lfb], esi" : [lfb] "=r"(K_LFB));
     asm("jmp kernel_main");
 }
 
@@ -37,135 +39,52 @@ uint16 inw(uint16 port){
     return data;
 }
 
-void memsbyte(uint64 addr, uint8 data){
+void memsbyte(uint32 addr, uint8 data){
     uint8 null = 0;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
     asm("mov bl, %[datad]" : "=r"(null) : [datad] "r"(data));
-    asm("mov byte ptr [rdi], bl");
+    asm("mov byte ptr [edi], bl");
 }
 
-uint8 memgbyte(uint64 addr){
+uint8 memgbyte(uint32 addr){
     uint8 null = 0;
     uint8 data;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
-    asm("mov %[outn], byte ptr [rdi]" : [outn] "=r"(data));
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+    asm("mov %[outn], byte ptr [edi]" : [outn] "=r"(data));
     return data;
 }
 
-void memsdword(uint64 addr, uint32 data){
-    uint64 null = 0;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+void memsdword(uint32 addr, uint32 data){
+    uint32 null = 0;
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
     asm("mov ebx, %[datad]" : "=r"(null) : [datad] "r"(data));
-    asm("mov dword ptr [rdi], ebx");
+    asm("mov dword ptr [edi], ebx");
 }
 
-uint32 memgdword(uint64 addr){
-    uint64 null = 0;
+uint32 memgdword(uint32 addr){
+    uint32 null = 0;
     uint32 data;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
-    asm("mov %[outn], dword ptr [rdi]" : [outn] "=r"(data));
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+    asm("mov %[outn], dword ptr [edi]" : [outn] "=r"(data));
     return data;
 }
 
-void memsword(uint64 addr, uint16 data){
-    uint64 null = 0;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+void memsword(uint32 addr, uint16 data){
+    uint32 null = 0;
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
     asm("mov bx, %[datad]" : "=r"(null) : [datad] "r"(data));
-    asm("mov word ptr [rdi], bx");
+    asm("mov word ptr [edi], bx");
 }
 
-uint16 memgword(uint64 addr){
-    uint64 null = 0;
+uint16 memgword(uint32 addr){
+    uint32 null = 0;
     uint16 data;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
-    asm("mov %[outn], word ptr [rdi]" : [outn] "=r"(data));
-    return data;
-}
-
-void memsqword(uint64 addr, uint64 data){
-    uint64 null = 0;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
-    asm("mov rbx, %[datad]" : "=r"(null) : [datad] "r"(data));
-    asm("mov qword ptr [rdi], rbx");
-}
-
-uint64 memgqword(uint64 addr){
-    uint64 null = 0;
-    uint64 data;
-    asm("mov rdi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
-    asm("mov %[outn], qword ptr [rdi]" : [outn] "=r"(data));
+    asm("mov edi, %[addrd]" : "=r"(null) : [addrd] "r"(addr));
+    asm("mov %[outn], word ptr [edi]" : [outn] "=r"(data));
     return data;
 }
 
 #define VGA_WIDTH 80
-
-void cursorspos(int x, int y)
-{
-	uint16 pos = y * VGA_WIDTH + x;
- 
-	outb(0x3D4, 0x0F);
-	outb(0x3D5, (uint8) (pos & 0xFF));
-	outb(0x3D4, 0x0E);
-	outb(0x3D5, (uint8) ((pos >> 8) & 0xFF));
-}
-
-uint16 cursorgpos()
-{
-    uint16 pos = 0;
-    outb(0x3D4, 0x0F);
-    pos |= inb(0x3D5);
-    outb(0x3D4, 0x0E);
-    pos |= ((uint16)inb(0x3D5)) << 8;
-    return pos;
-}
-
-int cursor_x = 0;
-int cursor_y = 0;
-
-void vga_scroll_down(){
-    for(int i = 0; i < ((80*2)+(25*(VGA_WIDTH*2))); i++){
-        memsbyte((0xb8000-(VGA_WIDTH*2))+(i), memgbyte(0xb8000+i));
-    }
-    // for(int i = 0; i < 80 i++;)
-    cursor_y--;
-    cursorspos(cursor_x, cursor_y);
-}
-
-void vga_put_char(uint8 ch, uint8 color){
-    int xi = cursor_x*2;
-    int yi = cursor_y*2;
-    if(cursor_x >= 80){     // implements scrolling when charachters reach border without using newline, messy and so is not recomended to be used with programs.
-        cursor_y++;
-        cursor_x = 0;
-        if(cursor_y >= 25){
-            vga_scroll_down();
-        }
-    }
-    if(ch == '\n'){
-        cursor_x = 0;
-        cursor_y++;
-        if(cursor_y >= 25){
-            vga_scroll_down();
-        }
-    }
-    else{
-        memsbyte(0xb8000+(xi+(yi*VGA_WIDTH)), ch);
-        memsbyte(0xb8001+(xi+(yi*VGA_WIDTH)), color);
-        cursor_x++;
-        if(cursor_y >= 25){
-            vga_scroll_down();
-        }
-    }
-    cursorspos(cursor_x, cursor_y);
-}
-
-void vga_put_string(const char *str, uint8 color){
-    int i = 0;
-    while(str[i] != 0){
-        vga_put_char(str[i], color);
-        i++;
-    }
-}
 
 bool strcmp(const char *str0, const char *str1){
     for(int i = 0; i == i; i++){
@@ -188,102 +107,91 @@ bool strcmp(const char *str0, const char *str1){
 
 #include "keys.h"
 
-char kb_getchar(){
-    char ret = getascii(inkey());
-    while(ret == 0){
-        ret = getascii(inkey());
-    }
-    if(ret == 1 || ret == '\n'){
-    }
-    else{
-        vga_put_char(ret, 0x0f);
-    }
-    return ret;
-}
-
 char *createStr(){
     static char str[999] = "";
     return str;
 }
 
-char *inputstring(int len){
-    char *ret = createStr();
-    int origonal_x = cursor_x;
-    for(int i = 0; i < len; i++){
-        char ch = kb_getchar();
-        if(ch == '\n'){
-            ret[i] = 0;
-            for(int i = 0; i < 29999999; i++){
-            }
-            return ret;
-        }
-        else if(ch == 1){
-            if(cursor_x != origonal_x){
-                cursor_x--;
-                vga_put_char(' ', 0x0f);
-                cursor_x--;
-                cursorspos(cursor_x, cursor_y);
-                i--;
-                ret[i] = 0;
-                i--;
-            }
-        }
-        else{
-            ret[i] = ch;
-        }
-        for(int i = 0; i < 29999999; i++){
-        }
-    }
-    return ret;
+// char testimg1[(10*10)+1][3] = {        // Test image
+//     // Image header:
+//     // 10x10 pixel resolution:
+//     {10, 10, 16},
+//     // Image data:
+// };
+
+struct Color{
+public:
+    uint8 R;
+    uint8 G;
+    uint8 B;
+};
+
+Color ColorFromRGB(int r, int g, int b){
+    Color col;
+    col.R = r;
+    col.G = g;
+    col.B = b;
+    return col;
 }
 
-char *splitstring(char *str, int index){
-    char *outstr = createStr();
-    int i = 0;
-    int i2 = 0;
-    int i3 = 0;
-    while(str[i] && i3 != index+1){
-        if(str[i] == ' '){
-            i2 = 0;
-            i3++;
-        }
-        else{
-            outstr[i2] = str[i];
-            i2++;
-            i++;
-        }
+class Rectangle{
+public:
+    int Width;
+    int Height;
+    int X;
+    int Y;
+    Color RGBColor;
+    Rectangle(int width, int height, int x, int y, Color col){
+        RGBColor = col;
+        Width = width;
+        Height = height;
+        X = x;
+        Y = y;
     }
-    outstr[i] = 0;
-    return outstr;
+};
+
+uint8 InneficientGoPastVmemInHope[((800*3)+(600*(800*3)))];
+uint8 IFB[((800*3)+(600*(800*3)))];
+
+void DrawRect(Rectangle rect){
+    int width = rect.Width;
+    int height = rect.Height;
+    int ox = rect.X;
+    int oy = rect.Y;
+    Color thecol = rect.RGBColor;
+    unsigned char col[3] = {thecol.B, thecol.G, thecol.R};
+    int x;
+    int y;
+    for(y = oy; y < height; y++){
+        for(x = ox; x < width; x++){
+            IFB[(x*3)+(y*(800*3))] = col[0];
+            IFB[(x*3)+1+(y*(800*3))] = col[1];
+            IFB[(x*3)+2+(y*(800*3))] = col[2];
+        }
+        x = ox;
+    }
 }
 
-void check_command(char inputstr[999]){
-    if(strcmp(splitstring(inputstr, 0), "LIST")){
-        vga_put_string("Feature Coming Soon!\n", 0x0e);
-    }
-    else if(strcmp(inputstr, "")){
-    }
-    else if(strcmp(splitstring(inputstr, 0), "TEST")){
-        vga_put_string("This Feature Is Used To Test New Features.\n", 0x0e);
-    }
-    else{
-        vga_put_string("Error, Unknown Command Or File '", 0x04);
-        vga_put_string(splitstring(inputstr, 0), 0x04);
-        vga_put_string("'.\n", 0x04);
+void DrawFrameBuffer(){
+    uint32 LFB = K_LFB;
+    uint32 *thefb = (uint32*)IFB;
+    for(int i = 0; i < ((800+(600*800))*3); i += 4){
+        memsdword(LFB+i, thefb[(i/4)]);
     }
 }
 
 extern "C"{
     void kernel_main(){
-        cursorspos(cursor_x, cursor_y);
-        vga_put_string("Welcome To Tethered OS Alpha 0.1!\nFor A List Of Commands, Type 'PLACEHOLDER'.\nCurret Keyboard Layout: US\n", 0x0f);
-        char *inputstr = createStr();
-        int a = 0;
-        while(true){
-            vga_put_string("command$: ", 0x0f);
-            inputstr = inputstring(999);
-            vga_put_string("\n", 0x0f);
-            check_command(inputstr);
+        uint32 LFB = K_LFB;
+        for(int i = 0; i < ((800+(600*800))*3); i += 4){
+            memsdword(LFB+i, 0);
+        }
+        while(1){
+            Rectangle rect1(100, 60, 10, 10, ColorFromRGB(255, 0, 0));
+            DrawRect(rect1);
+            Rectangle rect2(200, 300, 20, 10, ColorFromRGB(0, 127, 255));
+            DrawRect(rect2);
+            DrawFrameBuffer();
         }
     }
 }

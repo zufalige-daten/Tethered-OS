@@ -1,6 +1,6 @@
 cd src
-nasm -fbin bootld.asm -o bootld.bin
-g++ kernel.cpp -m64 -o kernel.elf -ffreestanding -nostdlib -nostdinc -masm=intel -fno-builtin
+fasm bootld.asm bootld.bin
+g++ kernel.cpp -m32 -o kernel.elf -ffreestanding -nostdlib -nostdinc -masm=intel -fno-builtin
 objcopy -O binary kernel.elf kernel.bin --set-start 0x7e00 --only-section=.text --only-section=.rodata --only-section=.data
 cd ..
 cat src/bootld.bin src/kernel.bin > bin/boot_nofs.img

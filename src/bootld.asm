@@ -1,91 +1,97 @@
 org 0x7c00
-bits 16
+use16
+
+start:
+	jmp ves
+	times 0x30-($-$$) db 2
+
+ves:
+   mov ax, 0x4F01
+   mov cx, 0x0115 or 0xc000
+   mov di, vesa_info
+   int 0x10
+
+   mov ax, 0x4F02
+   mov bx, 0x0115 or 0xc000
+   int 0x10
+
+   jmp init
+
+vesa_info:
+   dw 0
+   db 0
+   db 0
+   dw 0
+   dw 0
+   dw 0
+   dw 0
+   dd 0
+   dw 0
+
+   dw 0
+   dw 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+   db 0
+.linear_frame_buffer_start      dd 0
+   dd 0
+   dw 0
+   times 206 db 0
 
 init:
 	mov ah, 2
-	mov al, 18
+	mov al, 19
 	mov ch, 0
 	mov cl, 2
 	mov dh, 0
-	mov dl, 80h
 	mov bx, 0x7E00
 	int 13h
 
-	mov ah, 0x00
-	mov al, 0x03
-	int 0x10
+	cli				; disable the interrupts, just in
+					; case they are not disabled yet
 
-   cli
-	mov edi, 0x1000
-	mov cr3, edi
-	xor eax, eax
-	mov ecx, 4096
-	rep stosd
+	lgdt	[cs:GDTR]		; load GDT register
 
-	mov edi, 0x1000
-	mov dword [edi], 0x2003
-	add edi, 0x1000
-	mov dword [edi], 0x3003
-	add edi, 0x1000
-	mov dword [edi], 0x4003
-	add edi, 0x1000
-	mov dword ebx, 3
-	mov ecx, 512
+	mov	eax,cr0 		; switch to protected mode
+	or	al,1
+	mov	cr0,eax
 
-	.setEntry:
-		mov dword [edi], ebx
-		add ebx, 0x1000
-		add edi, 8
-		loop .setEntry
+	jmp	CODE_SELECTOR:pm_start
 
-	mov eax, cr4
-	or eax, 1 << 5
-	mov cr4, eax
-	mov ecx, 0xc0000080
-	rdmsr
 
-	or eax, 1 << 8
-	wrmsr
+NULL_SELECTOR = 0
+DATA_SELECTOR = 1 shl 3 		; flat data selector (ring 0)
+CODE_SELECTOR = 2 shl 3 		; 32-bit code selector (ring 0)
 
-	mov eax, cr0
-	or eax, 1 << 31
-	or eax, 1 << 0
+GDTR:					; Global Descriptors Table Register
+  dw 4*8-1				; limit of GDT (size minus one)
+  dq GDT				; linear address of GDT
 
-	mov cr0, eax
-	lgdt [GDT.Pointer]
-	jmp GDT.Code:LongMode
-	bits 64
-	LongMode:
-   jmp 0x7e00
+GDT rw 4				; null desciptor
+    dw 0FFFFh,0,9200h,08Fh		; flat data desciptor
+    dw 0FFFFh,0,9A00h,0CFh		; 32-bit code desciptor
 
-GDT:
-	.Null: equ $ - GDT
-		dw 0
-		dw 0
-		db 0
-		db 0
-		db 0
-		db 0
-	
-	.Code: equ $ - GDT
-		dw 0
-		dw 0
-		db 0
-		db 10011000b
-		db 00100000b
-		db 0
-	
-	.Data: equ $ - GDT
-		dw 0
-		dw 0
-		db 0
-		db 10000000b
-		db 0
-		db 0
-	
-	.Pointer:
-		dw $ - GDT - 1
-		dq GDT
+	USE32
+
+pm_start:
+	mov esi, dword [vesa_info.linear_frame_buffer_start]
+	jmp 0x7e00
 
 times 510-($-$$) db 0
 dw 0xaa55

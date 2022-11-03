@@ -1,0 +1,521 @@
+#include <types.h>
+static uint8_t prgbuffer[100*1024*1024];
+
+#define SHIFT_LEFT_DOWN 0x2a
+#define SHIFT_LEFT_UP 0xaa
+#define SHIFT_RIGHT_DOWN 0x36
+#define SHIFT_RIGHT_UP 0xb6
+#define CAPS 0x3a
+#define BACKSPACE 0x0e
+
+uint32_t *lfb;
+#define TOSFS_START 204883
+int x = 0; int y = 0;
+
+#include <basicio.h>
+extern "C"{
+void cursorspos(int x, int y){
+	uint16_t pos = y * 80 + x;
+ 
+	outb(0x3D4, 0x0F);
+	outb(0x3D5, (uint8_t) (pos & 0xFF));
+	outb(0x3D4, 0x0E);
+	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+uint16_t cursorgpos(){
+    uint16_t pos = 0;
+    outb(0x3D4, 0x0F);
+    pos |= inb(0x3D5);
+    outb(0x3D4, 0x0E);
+    pos |= ((uint16_t)inb(0x3D5)) << 8;
+    return pos;
+}
+void scroll(){
+    // for(int i = 0; i < ((80+(25*80))*2); i++){
+    //     lfb[i] = 0;
+    // }
+    for(int yi = 0; yi < 25; yi++){
+        for(int i = 0; i < 80; i++){
+            lfb[(i+((yi-1)*80))*2] = lfb[(i+(yi*80))*2];
+            lfb[1+(i+((yi-1)*80))*2] = lfb[1+(i+(yi*80))*2];
+            lfb[(i+(yi*80))*2] = 0;
+            lfb[1+(i+(yi*80))*2] = 0;
+        }
+    }
+    x = 0;
+    y--;
+}
+void putc(uint8_t chr){
+    if(x >= 80){
+        x = 0;
+        y++;
+    }
+    if(chr == '\n'){
+        y++;
+        x = 0;
+    }
+    else{
+        lfb[(x+(y*80))*2] = chr;
+        lfb[((x+(y*80))*2)+1] = 0x0f;
+        x++;
+    }
+    if(y >= 25){
+        scroll();
+    }
+    cursorspos(x, y);
+}
+void puts(string_t src, int startindex){
+    for(int i = 0;src[i+startindex]!=0;i++){
+        if(x >= 80){
+            x = 0;
+            y++;
+        }
+        if(src[i+startindex]=='\n'){
+            y++;
+            x = 0;
+        }
+        else{
+            lfb[((x)+(y*80))*2] = src[i+startindex];
+            lfb[(((x)+(y*80))*2)+1] = 0x0f;
+            x++;
+        }
+        if(y >= 25){
+            scroll();
+        }
+    }
+    cursorspos(x, y);
+}
+void putc_c(uint8_t chr, uint8_t col){
+    if(x >= 80){
+        x = 0;
+        y++;
+    }
+    if(chr == '\n'){
+        y++;
+        x = 0;
+    }
+    else{
+        lfb[(x+(y*80))*2] = chr;
+        lfb[((x+(y*80))*2)+1] = col;
+        x++;
+    }
+    if(y >= 25){
+        scroll();
+    }
+    cursorspos(x, y);
+}
+void puts_c(string_t src, int startindex, uint8_t col){
+    for(int i = 0;src[i+startindex]!=0;i++){
+        if(x >= 80){
+            x = 0;
+            y++;
+        }
+        if(src[i+startindex]=='\n'){
+            y++;
+            x = 0;
+        }
+        else{
+            lfb[((x)+(y*80))*2] = src[i+startindex];
+            lfb[(((x)+(y*80))*2)+1] = col;
+            x++;
+        }
+        if(y >= 25){
+            scroll();
+        }
+    }
+    cursorspos(x, y);
+}
+int strlen(string_t src, int startindex){
+    int i = 0;
+    for(;src[i+startindex]!=0;i++){}
+    return i;
+}
+bool strcmp(string_t src0, string_t src1){
+    if(strlen(src0, 0) == strlen(src1, 0)){
+        for(int i = 0; i < strlen(src0, 0); i++){
+            if(src0[i] != src1[i]){
+                return false;
+            }
+        }
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+uint8_t oldkey = 0;
+uint8_t waitkey(){
+    uint8_t key = inb(0x60);
+    while(key == oldkey){
+        key = inb(0x60);
+    }
+    oldkey = key;
+    return key;
+}
+uint8_t keytoascii[256]={
+    0x0,0x0,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x2d,0x3d,0x0,0x9,0x71,0x77,
+    0x65,0x72,0x74,0x79,0x75,0x69,0x6f,0x70,0x5b,0x5d,0xa,0x0,0x61,0x73,0x64,0x66,0x67,0x68,
+    0x6a,0x6b,0x6c,0x3b,0x27,0x60,0x0,0x23,0x7a,0x78,0x63,0x76,0x62,0x6e,0x6d,0x2c,0x2e,0x2f,
+    0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+    0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x5c
+};
+uint8_t keytoascii_s[256]={
+    0x0,0x0,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x2d,0x3d,0x0,0x9,0x71,0x77,
+    0x65,0x72,0x74,0x79,0x75,0x69,0x6f,0x70,0x5b,0x5d,0xa,0x0,0x61,0x73,0x64,0x66,0x67,0x68,
+    0x6a,0x6b,0x6c,0x3b,0x27,0x60,0x0,0x23,0x7a,0x78,0x63,0x76,0x62,0x6e,0x6d,0x2c,0x2e,0x2f,
+    0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+    0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x5c
+};
+uint8_t keytoascii_u[256]={
+    0x0,0x0,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x2d,0x3d,0x0,0x9,0x71,0x77,
+    0x65,0x72,0x74,0x79,0x75,0x69,0x6f,0x70,0x5b,0x5d,0xa,0x0,0x61,0x73,0x64,0x66,0x67,0x68,
+    0x6a,0x6b,0x6c,0x3b,0x27,0x60,0x0,0x23,0x7a,0x78,0x63,0x76,0x62,0x6e,0x6d,0x2c,0x2e,0x2f,
+    0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+    0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x5c
+};
+uint8_t keytoascii_su[256]={
+    0x0,0x0,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x30,0x2d,0x3d,0x0,0x9,0x71,0x77,
+    0x65,0x72,0x74,0x79,0x75,0x69,0x6f,0x70,0x5b,0x5d,0xa,0x0,0x61,0x73,0x64,0x66,0x67,0x68,
+    0x6a,0x6b,0x6c,0x3b,0x27,0x60,0x0,0x23,0x7a,0x78,0x63,0x76,0x62,0x6e,0x6d,0x2c,0x2e,0x2f,
+    0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+    0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x5c
+};
+uint8_t s_pressed = 0;
+uint8_t u_pressed = 0;
+uint8_t caps_on = 0;
+uint8_t shift_on = 0;
+uint8_t getchar(){
+    uint8_t chr = 0;
+    while(chr == 0){
+        uint8_t key = waitkey();
+        chr = keytoascii[key];
+    }
+    if(chr != '\n'){
+        putc(chr);
+    }
+    return chr;
+}
+string_t getstr(){
+    uint8_t chr = 0;
+    static uint8_t str[999];
+    int i = 0;
+    int initialx = x;
+    while(chr != '\n'){
+        uint8_t key = waitkey();
+        chr = keytoascii[key];
+        if(chr != 0){
+            if(chr == '\t'){
+                str[i] = ' ';
+            }
+            else if(chr == '\n'){str[i] = 0; i++; break;}
+            else if(caps_on==0&&shift_on==0){
+                str[i] = chr;
+            }
+            else if(caps_on==0xff&&shift_on==0){
+                chr = keytoascii_u[key];
+                str[i] = chr;
+            }
+            else if(caps_on==0&&shift_on==0xff){
+                chr = keytoascii_s[key];
+                str[i] = chr;
+            }
+            else if(caps_on==0xff&&shift_on==0xff){
+                chr = keytoascii_su[key];
+                str[i] = chr;
+            }
+            i++;
+            putc(chr);
+        }
+        else if(key == BACKSPACE && x > initialx){
+            i--;
+            str[i] = 0;
+            x--;
+            putc(' ');
+            x--;
+            cursorspos(x, y);
+        }
+        else if(key == CAPS){
+            caps_on = ~caps_on;
+        }
+        else if(key == SHIFT_LEFT_DOWN || key == SHIFT_RIGHT_DOWN){
+            shift_on = 0xff;
+        }
+        else if(key == SHIFT_LEFT_UP || key == SHIFT_RIGHT_UP){
+            shift_on = 0;
+        }
+    }
+    i--;
+    str[i] = 0;
+    return str;
+}
+string_t split_string(string_t src, uint8_t delim, int index){
+    static uint8_t des[1024];
+    for(int h = 0; h < 1024; h++){
+        des[h] = 0;
+    }
+    int off = 0;
+    int j = 0;
+    int outd = 0;
+    int oi = 0;
+    int i = 0;
+    while(src[i] == delim){
+        i++;
+    }
+    for(; i < strlen(src, 0); i++){
+        if(src[i] == delim){
+            des[j] = 0;
+            j = 0;
+            if(index == off){
+                outd = oi;
+                break;
+            }
+            off++;
+            while(src[i] == delim){
+                i++;
+            }
+            oi = i;
+            i--;
+        }
+        else{
+            des[j] = src[i];
+            j++;
+        }
+    }
+    if(index != off){
+        return (string_t)"";
+    }
+    return des;
+}
+#include <idepio.h>
+#include <tosfs.h>
+#include <idt.h>
+#define retbit(var,pos) (((var) & (1<<(pos)))>>(pos))
+#include <ps2mouse.h>
+static uint8_t filebuffer[100*1024*1024];
+static uint32_t prgfuns[256] = {
+    (uint32_t)readlba48, (uint32_t)writelba48, (uint32_t)putc, (uint32_t)puts, (uint32_t)getchar
+};
+string_t its(uint32_t it){
+    static uint8_t out[12];
+    int sz = 0;
+    int it2 = it;
+    while(it2/10 != 0){
+        it2 /= 10;
+        sz++;
+    }
+    sz++;
+    out[sz] = '\0';
+    it2 = it;
+    for(int i = sz-1;i>=0;i--){
+        out[i] = (it2%10)+'0';
+        it2 /= 10;
+    }
+    return out;
+}
+static uint8_t filenameog[999];
+#define PS2_CMD_REG 0x64
+#define PS2_ENKB 0xae
+#define PS2_DISKB 0xad
+#define PS2_ENMS 0xa8
+#define PS2_DISMS 0xa7
+#define PS2_TESTMS 0xa9
+void iloop(){
+    uint8_t *filename;
+    while(1){
+            puts((string_t)"> ", 0);
+            string_t strd = getstr();
+            string_t str = split_string(strd, ' ', 0);
+            putc('\n');
+            if(strcmp(str, (string_t)"ls")){
+                listfiles((string_t)"");
+            }
+            else if(strcmp(str, (string_t)"help")){
+                puts((string_t)"Commands: ls, scancodes, help.\n", 0);
+            }
+            else if(strcmp(str, (string_t)"scancodes")){
+                while(1){
+                    puts((string_t)"scancode:", 0);
+                    uint8_t key = waitkey();
+                    uint8_t key_h = key&0x0f;
+                    uint8_t key_l = (key&0xf0)>>4;
+                    switch(key_l){
+                        case 1: putc('1'); break;
+                        case 2: putc('2'); break;
+                        case 3: putc('3'); break;
+                        case 4: putc('4'); break;
+                        case 5: putc('5'); break;
+                        case 6: putc('6'); break;
+                        case 7: putc('7'); break;
+                        case 8: putc('8'); break;
+                        case 9: putc('9'); break;
+                        case 10: putc('a'); break;
+                        case 11: putc('b'); break;
+                        case 12: putc('c'); break;
+                        case 13: putc('d'); break;
+                        case 14: putc('e'); break;
+                        case 15: putc('f'); break;
+                        default: putc('0'); break;
+                    }
+                    switch(key_h){
+                        case 1: putc('1'); break;
+                        case 2: putc('2'); break;
+                        case 3: putc('3'); break;
+                        case 4: putc('4'); break;
+                        case 5: putc('5'); break;
+                        case 6: putc('6'); break;
+                        case 7: putc('7'); break;
+                        case 8: putc('8'); break;
+                        case 9: putc('9'); break;
+                        case 10: putc('a'); break;
+                        case 11: putc('b'); break;
+                        case 12: putc('c'); break;
+                        case 13: putc('d'); break;
+                        case 14: putc('e'); break;
+                        case 15: putc('f'); break;
+                        default: putc('0'); break;
+                    }
+                    putc('\n');
+                }
+            }
+            else if(strcmp(str, (string_t)""));
+            else if(strcmp(str, (string_t)"clear")){
+                for(int i = 0; i < 40; i++){
+                    puts((string_t)"                                        ", 0);
+                    puts((string_t)"                                        \n", 0);
+                }
+                x = 0; y = 0;
+            }
+            else if(strcmp(str, (string_t)"cat")){
+                filename = split_string(strd, ' ', 1);
+                uint32_t sz = file_read(filename, filebuffer);
+                for(uint32_t ert = 0; ert < sz; ert++){
+                    putc(filebuffer[ert]);
+                }
+            }
+            else if(strcmp(str, (string_t)"prgload")){
+                puts(its((uint32_t)prgbuffer), 0);
+                putc('\n');
+                // 0x4104020
+                // 0x4105840
+            }
+            else if(strcmp(str, (string_t)"kload")){
+                puts(its((uint32_t)iloop), 0);
+                putc('\n');
+                // 0x1017C6
+            }
+            else if(str[0] == '.' && str[1] == '/'){
+                filename = split_string(strd, ' ', 0);
+                for(int i = 0; i < strlen(str, 0)-2; i++){
+                    filename[i] = str[i+2];
+                }
+                filename[strlen(str, 0)-2] = 0;
+                uint32_t sz = file_read(filename, prgbuffer);
+                void (*program)() = (void (*)())((uint32_t)prgbuffer);
+                asm("mov eax, %[kloadf]"::[kloadf]"r"((uint32_t)iloop));
+                asm("push eax");
+                asm("mov eax, %[prgfunsf]"::[prgfunsf]"r"((uint32_t)prgfuns));
+                asm("push eax");
+                program();
+            }
+            else if(strcmp(str, (string_t)"mtest")){
+                // uint32_t cx = 0;
+                // uint32_t cy = 0;
+                // while(true){
+                //     uint8_t lower = inb(0x60);
+                //     x = 0;
+                //     y = 10;
+                //     puts(its((uint32_t)lower), 0);
+                //     putc('\n');
+                //     uint8_t index[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+                //     putc(index[(lower & 0xF0)>>4]);
+                //     putc(index[lower & 0x0F]);
+                //     putc('\n');
+                //     puts(its(cx), 0);
+                //     putc('\n');
+                //     puts(its(cy), 0);
+                // }
+                outb(PS2_CMD_REG, PS2_DISKB);
+                outb(PS2_CMD_REG, PS2_ENMS);
+                uint32_t by = 1000;
+                // while(true){
+                //     x = 0;
+                //     y = 10;
+                //     lfb[2*((defx/by)+((defy/by)*80))] = 'Q';
+                //     lfb[(2*((defx/by)+((defy/by)*80)))+1] = 0x0f;
+                //     mouse_handler((uint32_t*)0);
+                // }
+                outb(PS2_CMD_REG, PS2_DISMS);
+                outb(PS2_CMD_REG, PS2_ENKB);
+            }
+            else{
+                puts((string_t)"Error, unknown command or filename '", 0);
+                puts(str, 0);
+                puts((string_t)"'.\n", 0);
+            }
+    }
+}
+uint32_t lfb2[800+(600*800)];
+void loader_main(uint32_t *mbootinfo){
+    // lfb = (string_t)0xb8000;
+    set_idt();
+    mouse_install();
+    // outb(PS2_CMD_REG, PS2_DISMS);
+    // outb(PS2_CMD_REG, PS2_ENKB);
+    // puts((string_t)"Tethered OS 0.1.\nType help for a list of commands.\n", 0);
+    // oldkey = inb(0x60);
+    // iloop();
+    lfb = (uint32_t *)mbootinfo[22];
+    lfb[0] = 0xffffffff;
+    lfb[799+(599*800)] = 0xffffffff;
+    outb(PS2_CMD_REG, PS2_DISKB);
+    outb(PS2_CMD_REG, PS2_ENMS);
+    // uint32_t by = 1;
+    while(true){
+        for(int aay = 0; aay < 600; aay++){
+            for(int aax = 0; aax < 800; aax++){
+                lfb2[aax+(aay*800)] = 0x00000000;
+            }
+        }
+        for(int aay = 0; aay < 40; aay++){
+            for(int aax = 0; aax < 40; aax++){
+                lfb2[((mouse_x/10)+aax)+(((mouse_y/10)+aay)*800)] = 0xffffffff;
+            }
+        }
+        // mouse_handler((uint32_t*)0);
+        for(int aay = 0; aay < 600; aay++){
+            for(int aax = 0; aax < 800; aax++){
+                lfb[aax+(aay*800)] = lfb2[aax+(aay*800)];
+            }
+        }
+    }
+    // while(true){
+    //     x = 0;
+    //     y = 0;
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 0)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 1)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 2)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 3)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 4)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 5)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 6)), 0);
+    //     puts(its((uint32_t)retbit(mouse_byte[0], 7)), 0);
+    //     putc('\n');
+    //     puts(its(mouse_x), 0);
+    //     putc('\n');
+    //     puts(its(mouse_y), 0);
+    //     putc('\n');
+    //     puts(its((uint32_t)retbit(mouse_y, 0)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 1)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 2)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 3)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 4)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 5)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 6)), 0);
+    //     puts(its((uint32_t)retbit(mouse_y, 7)), 0);
+    //     mouse_handler((uint32_t*)0);
+    // }
+    outb(PS2_CMD_REG, PS2_DISMS);
+    outb(PS2_CMD_REG, PS2_ENKB);
+    while(1){}
+}
+}

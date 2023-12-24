@@ -1,0 +1,92 @@
+MBALIGN equ 1 << 0
+MMAPENABLE equ 1 << 1
+VIDINFO equ 1 << 2
+FLAGS equ MBALIGN | MMAPENABLE | VIDINFO
+MAGIC equ 0x1BADB002
+CHECKSUM equ -(MAGIC + FLAGS)
+
+section .multiboot
+multibootheader:
+	align 4
+	dd MAGIC
+	dd FLAGS
+	dd CHECKSUM
+	dd 0, 0, 0, 0, 0
+	dd 0
+	dd 1920, 1080, 32
+
+section .text
+global _start
+	_start:
+		lgdt [gdtr32]
+		jmp 0x08:_ret
+	_ret:
+		mov esp, stack_top
+		mov ebp, esp
+		push ebx
+		extern boot_main
+		call boot_main
+		jmp $
+
+global jmpkernel
+	jmpkernel:
+		mov edi, 0x1000
+		mov cr3, edi
+		mov eax, cr4
+		or eax, 1 << 5
+		mov cr4, eax
+		mov ecx, 0xC0000080
+		rdmsr
+		or eax, 1 << 8
+		wrmsr
+		mov eax, cr0
+		or eax, 1 << 31
+		mov cr0, eax
+		jmp compatmode
+
+bits 32
+	compatmode:
+		lgdt [gdtr64]
+		jmp 0x08:longmode
+
+bits 64
+	longmode:
+		cli
+		mov ax, 0x10
+		mov ds, ax
+		mov es, ax
+		mov fs, ax
+		mov gs, ax
+		mov ss, ax
+		xor rdx, rdx
+		mov edx, khs
+		jmp 0x7e00
+
+section .data
+global khs
+	khs: times 5163 db 0
+	align 8
+	gdtr32:
+		dw (gdt32_end-gdt32)-1
+		dd gdt32
+
+	gdt32:
+		.null: dq 0
+		.kmodecode: dq 0x00cf9a000000ffff
+		.kmodedata: dq 0x00cf92000000ffff
+	gdt32_end:
+
+	gdtr64:
+		dw (gdt64_end-gdt64)-1
+		dq gdt64
+
+	gdt64:
+		.null: dq 0
+		.kmodecode: dq 0x00af9a000000ffff
+		.kmodedata: dq 0x00cf92000000ffff
+	gdt64_end:
+
+section .bss
+	stack_base:
+	resb 8192
+	stack_top:

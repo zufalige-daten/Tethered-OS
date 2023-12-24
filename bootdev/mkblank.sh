@@ -1,1 +1,0 @@
-sudo dd if=/dev/zero of=blank.iso count=204883

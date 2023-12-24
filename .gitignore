@@ -1,0 +1,6 @@
+*.img
+*.elf
+*.bin
+*.log
+*.rubbishbin
+*.vscode

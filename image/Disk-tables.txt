@@ -1,0 +1,2 @@
+start=1, size=204800, type=1b, name="boot"
+start=204801, size=3932160, type=89, name="system"

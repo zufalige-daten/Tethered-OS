@@ -31,3 +31,6 @@ typedef struct{
 
 extern tss_t tss[128];
 extern uint64_t tss_count;
+
+extern void ldtssi(uint16_t tss_i);
+

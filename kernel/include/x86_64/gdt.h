@@ -40,3 +40,4 @@ typedef struct{
 } _packed gdtr_t;
 
 extern void reload_gdt(gdtr_t *gdtr);
+

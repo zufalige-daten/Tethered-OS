@@ -2,30 +2,36 @@
 
 #include <kernel.h>
 #include <stdint.h>
+#include <stddef.h>
 
-extern uint64_t pmem_lowest_free;
-extern uint64_t pmem_max;
-extern uint64_t pmem_map_ptr;
-extern uint64_t pmem_map_end;
-extern uint8_t *pmem_map_l3;
-extern uint8_t *pmem_map_l2;
-extern uint64_t *pmem_map_l1;
+extern size_t pmem_lowest_free;
+extern size_t pmem_max;
+extern size_t pmem_map_ptr;
+extern size_t pmem_map_size;
 
-extern void physalloc(uint64_t physaddr, uint64_t size_bytes);
+extern void physalloc(size_t physaddr, size_t r_size_bytes);
 
-#define PMEM_PAGE_SIZE 32768
+#define PMEM_PAGE_SIZE_2S 7
+#define PMEM_PAGE_SIZE ((1<<PMEM_PAGE_SIZE_2S)*1024)
+#define BMCONSTRUCT(n) ((1<<n)-1)
+#define BM_PMEM2S BMCONSTRUCT(PMEM_PAGE_SIZE_2S)
 
 typedef struct{
-	uint64_t address;
-	uint64_t size;
+	size_t address;
+	size_t size;
 } __attribute__((packed)) pagespan_t;
 
 typedef struct{
-	uint64_t pagespanscompleted;
+	size_t pagespanscompleted;
 } __attribute__((packed)) palloc_state_t;
 
-extern pagespan_t palloc(uint64_t size_bytes, palloc_state_t *state);
+typedef size_t palloc_entry_t;
+
+extern palloc_entry_t *palloc_entries;
+
+extern pagespan_t palloc(size_t size_bytes, palloc_state_t *state);
 extern void init_pmemalloc(void);
 extern void test_pmemalloc(void);
-extern uint64_t getlowestfree(uint64_t index);
-extern uint64_t allocationsize(uint64_t address);
+extern size_t getlowestfree(size_t index);
+extern size_t allocationsize(size_t address);
+

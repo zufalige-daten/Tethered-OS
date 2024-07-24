@@ -1,0 +1,5 @@
+-I kernel/include
+-I bootmanager/include
+-mgeneral-regs-only
+-mno-red-zone
+

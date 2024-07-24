@@ -31,4 +31,7 @@
 
 #define kernel_pat 0x0000000504070106;
 
+#define VPAGE_SIZE
+
 extern void allocate_page(void *paddr, void *vaddr, uint64_t attributes, uint8_t table_level);
+

@@ -368,15 +368,15 @@ void boot_main(uint32_t *multibootinfo){
 	boot_mmap_entry_t mmap[256];
 	uint64_t mem_size = 0;
 	multiboot_info_t *mbd = (multiboot_info_t *)multibootinfo;
-	for(uint32_t i = 0; i < mbd->mmap_length; i += sizeof(multiboot_memory_map_t)){
+	for(uint32_t i = 0; i < (mbd->mmap_length - sizeof(multiboot_memory_map_t)); i += sizeof(multiboot_memory_map_t)){
 		multiboot_memory_map_t *mmmt = (multiboot_memory_map_t *)(mbd->mmap_addr + i);
 		uint64_t addr = mmmt->addr;
 		uint64_t len = mmmt->len;
 		mmap[(i / sizeof(multiboot_memory_map_t))].baseaddr = addr;
 		mmap[(i / sizeof(multiboot_memory_map_t))].size = len;
 		mmap[(i / sizeof(multiboot_memory_map_t))].type = mmmt->type;
-		if((addr + len) > mem_size){
-			mem_size = (addr + len);
+		if(i == ((mbd->mmap_length - (2 * sizeof(multiboot_memory_map_t))))){
+			mem_size = addr + len;
 		}
 	}
 	mmap[(mbd->mmap_length / sizeof(multiboot_memory_map_t))].type = 0;

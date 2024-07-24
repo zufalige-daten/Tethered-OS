@@ -39,13 +39,13 @@ void arch_setup(kernel_header_struct_t kheader){
 	uint32_t *pat_ptr__ = (uint32_t *)(&pat__);
 	setmsr(0x277, pat_ptr__[0], pat_ptr__[1]);
 	// note before anything
-	// identity map the first 64 TiB of memory
+	// identity map the first 16 TiB of memory
 	// clear the pml4 and pml3 tables
 	// allocate all of the specific addresses
-	for(uint64_t i = 0; i < 128; i++){
+	for(uint64_t i = 0; i < 16 * 2; i++){
 		kernel_pml4_map[i] = ((uint64_t)(&kernel_pml3_map_n[i * 512])) | PML_P | PML_RW;
 	}
-	for(uint64_t i = 0; i < 128 * 512; i++){
+	for(uint64_t i = 0; i < 16 * 2 * 512; i++){
 		kernel_pml3_map_n[i] = (i * (1024*1024*1024)) | PML_P | PML_RW | PML_PS;
 	}
 	asm volatile(
@@ -70,7 +70,7 @@ void arch_setup(kernel_header_struct_t kheader){
 	gdt.k_code.base3 = 0;
 	gdt.k_code.limit1 = 0xffff;
 	gdt.k_code.flaglimit2 = 0b10101111;
-	gdt.k_code.access_byte = 0b10011110;
+	gdt.k_code.access_byte = 0b10011010;
 	gdt.u_code = gdt.k_code;
 	gdt.u_code.access_byte = 0b11111010;
 	gdt.k_data = gdt.k_code;
@@ -80,10 +80,11 @@ void arch_setup(kernel_header_struct_t kheader){
 	gdt.u_data.access_byte = 0b11110010;
 	tss_count = cpu_core_count;
 	for(uint64_t i = 0; i < tss_count; i++){
-		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(long_system_segment_descriptor_t), (0b1000 << 4) | 0x9, 0b0100);
-		tss[i].iopb = 0;
+		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(tss_t) - 1, 0b10001001, 0b0000);
+		tss[i].iopb = 104;
 		tss[i].rsp0 = ((uint64_t)&stack_top) - (65536 * i);
 	}
 	reload_gdt(&gdtr);
 	kernel_printf("[SUCCESS]\n");
 }
+

@@ -2,5 +2,6 @@
 *.elf
 *.bin
 *.log
-*.rubbishbin
-*.vscode
+*.iso
+github-copy.sh
+

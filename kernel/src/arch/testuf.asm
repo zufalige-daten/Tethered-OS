@@ -25,6 +25,7 @@ section .text
 		o64 sysret
 	ret
 	global test_user_function
+	align 4096
 	test_user_function:
 		nop
 	ret

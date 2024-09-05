@@ -20,7 +20,8 @@ object_main = 'multiboot.o'
 	include_local = '#include "%s"'
 	include_lib = '#include <%s>'
 	source_ext = 'c'
-	compiler_command = 'i686-elf-gcc -g -c -m32 -o {output} {input} -I {include} -nostdlib -fno-stack-protector -ffreestanding -O2 -Wall -Wextra -fno-exceptions -masm=intel -Wno-unused-parameter --param=min-pagesize=0'
+	compiler_command = 'i686-elf-gcc -g -c -m32 -o {output} {input} -I {include} -nostdlib -fno-stack-protector -ffreestanding -O2 -Wall -Wextra -fno-exceptions -masm=intel -Wno-unused-parameter'
 }
 
 linker_command = 'ld -m elf_i386 -T linker.ld -o {output} {input} -nostdlib'
+

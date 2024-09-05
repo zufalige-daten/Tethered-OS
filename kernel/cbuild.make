@@ -13,7 +13,7 @@ object_main = 'arch/boot.o'
 	include_local = '#include "%s"'
 	include_lib = '#include <%s>'
 	source_ext = 'c'
-	compiler_command = 'x86_64-elf-gcc -g -c -m64 -o {output} {input} -I {include} -nostdlib -fno-stack-protector -ffreestanding -O2 -Wall -Wextra -fno-exceptions -masm=intel -mcmodel=large -Wno-unused-parameter --param=min-pagesize=0 -mno-red-zone -mgeneral-regs-only'
+	compiler_command = 'x86_64-elf-gcc -g -c -m64 -o {output} {input} -I {include} -nostdlib -fno-stack-protector -ffreestanding -O2 -Wall -Wextra -fno-exceptions -masm=intel -mcmodel=large -Wno-unused-parameter -mno-red-zone -mgeneral-regs-only'
 }
 
 {
@@ -24,3 +24,4 @@ object_main = 'arch/boot.o'
 }
 
 linker_command = 'ld -m elf_x86_64 -T linker.ld -o {output} {input} -nostdlib && ld -m elf_x86_64 -T debug.ld -o {output}.debug.elf {input} -nostdlib'
+

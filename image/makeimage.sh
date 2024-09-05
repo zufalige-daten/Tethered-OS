@@ -5,6 +5,7 @@ rm -rf temp
 mkdir temp
 cp -a ../root/. temp/
 rm output/boot.img
+touch output/boot.img
 fallocate -l 2048m output/boot.img
 sudo mkfs.vfat -F 32 -n BOOT output/boot.img #--offset 1
 ../tools/mkfs.tufs output/boot.img -d temp -s 1920m -l system -S 204801 -r 2

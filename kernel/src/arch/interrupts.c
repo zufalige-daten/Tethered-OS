@@ -63,7 +63,7 @@ _interrupt void ex_stacksegfault(interrupt_frame_t *frame, uint64_t err){
 	kbreak;
 }
 _interrupt void ex_generalprotfault(interrupt_frame_t *frame, uint64_t err){
-	kernel_printf("Interrupt: GPFINT %x.\n", err);
+	kernel_printf("Interrupt: GPFINT %x, instruction address: 0x%x, cs: 0x%x, sp: 0x%x, ss: 0x%x selectors.\n", err, (uint64_t)frame->ip, (uint64_t)frame->cs, (uint64_t)frame->sp, (uint64_t)frame->ss);
 	kbreak;
 }
 _interrupt void ex_pagefault(interrupt_frame_t *frame, uint64_t err){

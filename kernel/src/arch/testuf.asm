@@ -1,32 +1,37 @@
 section .text
+	ADDRESS_ABSOLUTE equ (16*(1024*1024*1024))
+	CODE_SELECTOR equ 24
+	DATA_SELECTOR equ 32
 	global um_enter
 	um_enter:
-		; enable syscall and sysret
-		mov rcx, 0xC0000082
-		wrmsr
-		mov rcx, 0xC0000080
-		rdmsr
-		or eax, 1
-		wrmsr
-		mov rcx, 0xC0000081
-		rdmsr
-		mov edx, 0x0018000C
-		wrmsr
-
-		mov ax, 0x23
-		mov es, ax
+		cli
+		mov rax, 0
+		mov rdx, 0
+		mov ax, DATA_SELECTOR | 0x3
 		mov ds, ax
+		mov es, ax
 		mov fs, ax
 		mov gs, ax
 
-		; load RIP and EFLAGS
-		mov rcx, test_user_function ; 16*(1024*1024*1024)
-		mov r11, 0x202
-		o64 sysret
+		mov rdi, ADDRESS_ABSOLUTE
+		mov rsi, stack
+		mov dx, CODE_SELECTOR | 0x3
+		mov ax, DATA_SELECTOR | 0x3
+		push rax
+		push rsi
+		push 0x200
+		push rdx
+		push rdi
+		iretq
 	ret
 	global test_user_function
 	align 4096
 	test_user_function:
 		nop
+		mov rbx, 0
+		int 0x80
 	ret
+	align 4096
+	stack:
+		times 4096 db 0
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <x86_64/tss.h>
+#include <arch/kernel_string.h>
 
 extern uint64_t kernel_pml3_map_n[256*512];
 extern uint64_t kernel_pml4_map[512];
@@ -20,6 +21,7 @@ void test_usermode(void){
 		::
 		"a" ((uint64_t)(&kernel_pml4_map[0]))
 	);
+	kernel_printf("&test_user_function: hex 0x%x.\n", (uint64_t)&test_user_function);
 	// asm volatile("mov ax, (4*8)");
 	// asm volatile("mov ds, ax");
 	// asm volatile("mov es, ax");

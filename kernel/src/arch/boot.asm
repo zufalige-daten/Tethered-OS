@@ -25,11 +25,11 @@ section .bss
 	global kernel_pml3_map_n
 	global kernel_pml2_map_1
 	global stack_top
-	align 16
-	resb 65536*128 ; 1 stack for each core's kernel instance
+	align 4096
+	resb 65536*129 ; 1 stack for each core's kernel instance
 	stack_top:
 	align 4096
 	kernel_pml4_map: resb 4096
-	kernel_pml3_map_n: resb 8*16*2*512
+	kernel_pml3_map_n: resb 256*512*8
 	kernel_pml2_map_1: resb 4096
 

@@ -8,7 +8,6 @@ typedef struct{
 	uint64_t rsp1;
 	uint64_t rsp2;
 	uint32_t rsvd1;
-	uint32_t rsvd2;
 	uint64_t ist1;
 	uint64_t ist2;
 	uint64_t ist3;
@@ -16,9 +15,8 @@ typedef struct{
 	uint64_t ist5;
 	uint64_t ist6;
 	uint64_t ist7;
-	uint32_t rsvd3;
-	uint32_t rsvd4;
-	uint16_t rsvd5;
+	uint64_t rsvd2;
+	uint16_t rsvd3;
 	uint16_t iopb;
 } _packed tss_t;
 

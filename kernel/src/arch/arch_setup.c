@@ -86,9 +86,9 @@ void arch_setup(kernel_header_struct_t kheader){
 	gdt.u_data = gdt.k_data;
 	gdt.u_data.access_byte = 0b11110010;
 	for(uint64_t i = 0; i < tss_count; i++){
-		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(tss_t) - 1, 0b10001001, 0b0000);
-		tss[i].iopb = 0xdfff;
-		tss[i].rsp0 = ((uint64_t)&stack_top) - (65536 * i);
+		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(tss_t) - 1, 0b11101001, 0b0000);
+		tss[i].iopb = sizeof(tss_t);
+		tss[i].rsp0 = ((uint64_t)&stack_top) - (65536 * (i + 1));
 	}
 	reload_gdt(&gdtr);
 	kernel_printf("[SUCCESS]\n");

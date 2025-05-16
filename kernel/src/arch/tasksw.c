@@ -15,11 +15,12 @@ extern void um_enter(void);
 void test_usermode(void){
 	ldtssi(0);
 	// first allocate required userland virtual page
-	kernel_pml3_map_n[16] = ((uint64_t)&test_user_function) | PML_P | PML_RW | PML_PS | PML_US;
+	kernel_pml3_map_n[32*512] = ((uint64_t)&test_user_function) | PML_P | PML_RW | PML_PS | PML_US;
+	kernel_pml4_map[32] = ((uint64_t)&kernel_pml3_map_n[32*512]) | PML_P | PML_RW | PML_US;
 	asm volatile(
-		"mov cr3, rax\n"
+		"invlpg [%0]"
 		::
-		"a" ((uint64_t)(&kernel_pml4_map[0]))
+		"r" (32L*512L*1024L*1024L*1024L)
 	);
 	kernel_printf("&test_user_function: hex 0x%x.\n", (uint64_t)&test_user_function);
 	// asm volatile("mov ax, (4*8)");

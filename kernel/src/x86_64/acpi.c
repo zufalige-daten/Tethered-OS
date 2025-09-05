@@ -83,7 +83,7 @@ void acpi_init(void){
 				}
 				if(rsdp->revision > 0){
 					isnv1 = 1;
-					uint64_t rsdp_checksum_verif = 0xe0000 + i + sizeof(ACPI_RSDP_t);
+					// uint64_t rsdp_checksum_verif = 0xe0000 + i + sizeof(ACPI_RSDP_t);
 					xsdp = (ACPI_XSDP_t *)rsdp;
 					result = 0;
 					for(uint64_t byte = sizeof(ACPI_RSDP_t); byte < sizeof(ACPI_XSDP_t); byte++){

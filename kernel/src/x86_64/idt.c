@@ -1,4 +1,5 @@
 #include <kernel.h>
+#include <stdint.h>
 #include <x86_64/idt.h>
 #include <arch/fast_memcpy.h>
 #include <arch/kernel_string.h>
@@ -17,8 +18,10 @@ inline void idt_reload(void){
 	asm volatile("lidt %0" :: "m"(kernel_idtr));
 }
 
-void idt_set(int idt_index, void *isr, uint8_t selector, uint8_t ist, uint8_t type_attribs){
-	kernel_idt[idt_index].attribs = type_attribs;
+void idt_set(int idt_index, void *isr, uint8_t selector, uint8_t ist, uint8_t gate_type, uint8_t dpl, uint8_t present){
+	kernel_idt[idt_index].present = present;
+	kernel_idt[idt_index].gate_type = gate_type;
+	kernel_idt[idt_index].dpl = dpl;
 	kernel_idt[idt_index].selector = selector;
 	kernel_idt[idt_index].ist = ist;
 	kernel_idt[idt_index].offset0 = (uint16_t)((uint64_t)isr);

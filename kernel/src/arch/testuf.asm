@@ -1,9 +1,10 @@
 section .text
-	ADDRESS_ABSOLUTE equ (32*512*(1024*1024*1024))
+	ADDRESS_ABSOLUTE equ (33*512*(1024*1024*1024))
 	CODE_SELECTOR equ 24
 	DATA_SELECTOR equ 32
 	global um_enter
 	um_enter:
+		cli
 		mov rax, 0
 		mov rdx, 0
 		mov ax, DATA_SELECTOR | 0x3
@@ -12,14 +13,16 @@ section .text
 		mov fs, ax
 		mov gs, ax
 
-		mov rdi, ADDRESS_ABSOLUTE
-		mov rsi, um_stack
-		mov dx, CODE_SELECTOR | 0x3
-		mov ax, DATA_SELECTOR | 0x3
+		mov rdi, test_user_function
+		; mov rsi, test_user_function + 4096
+		mov rax, rsp
+		push DATA_SELECTOR | 0x3
 		push rax
-		push rsi
-		push 0x200
-		push rdx
+		pushfq
+		pop rax
+		or rax, 0x200
+		push rax
+		push CODE_SELECTOR | 0x3
 		push rdi
 		iretq
 	ret

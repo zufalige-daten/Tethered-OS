@@ -44,10 +44,10 @@ void arch_setup(kernel_header_struct_t kheader){
 	// clear the pml4 and pml3 tables
 	// allocate all of the specific addresses
 	for(uint64_t i = 0; i < 16 * 2; i++){
-		kernel_pml4_map[i] = ((uint64_t)(&kernel_pml3_map_n[i * 512])) | PML_P | PML_RW;
+		kernel_pml4_map[i] = ((uint64_t)(&kernel_pml3_map_n[i * 512])) | PML_P | PML_RW | PML_US;
 	}
 	for(uint64_t i = 0; i < 16 * 2 * 512; i++){
-		kernel_pml3_map_n[i] = (i * (1024*1024*1024)) | PML_P | PML_RW | PML_PS;
+		kernel_pml3_map_n[i] = (i * (1024*1024*1024)) | PML_P | PML_RW | PML_PS | PML_US;
 	}
 	asm volatile(
 		"mov cr3, rax\n"
@@ -60,9 +60,8 @@ void arch_setup(kernel_header_struct_t kheader){
 	kernel_printf("[SUCCESS]\n");
 	kernel_printf("Getting CPU Core Count... ");
 	acpi_walk_madt();
-	uint16_t cpu_core_count = cpucorecount;
 #ifndef TSS_MONO
-	tss_count = cpu_core_count;
+	tss_count = cpucorecount;
 #endif
 #ifdef TSS_MONO
 	tss_count = 1;
@@ -86,7 +85,7 @@ void arch_setup(kernel_header_struct_t kheader){
 	gdt.u_data = gdt.k_data;
 	gdt.u_data.access_byte = 0b11110010;
 	for(uint64_t i = 0; i < tss_count; i++){
-		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(tss_t) - 1, 0b11101001, 0b0000);
+		set_tss_des((long_system_segment_descriptor_t *)(&gdt.tss[i]), (uint64_t)(&tss[i]), sizeof(tss_t) - 1, 0b11101001, 0x0);
 		tss[i].iopb = sizeof(tss_t);
 		tss[i].rsp0 = ((uint64_t)&stack_top) - (65536 * (i + 1));
 	}

@@ -127,13 +127,10 @@ _interrupt void nu_unknowninterrupt(interrupt_frame_t *frame){
 }
 // end interrupt handelers
 
-#define KTRAP_INT IDT_ATTRIB_DPL_3 | IDT_ATTRIB_GATE_LONG_TRAP | IDT_ATTRIB_PRESENT
-#define KINT_INT IDT_ATTRIB_DPL_3 | IDT_ATTRIB_GATE_LONG_INTERUPT | IDT_ATTRIB_PRESENT
-
 int ktrap_index = 0;
 
 void sp_idt_set_ktrap(void *proc){
-	idt_set(ktrap_index, proc, 0x8, 0, KTRAP_INT);
+	idt_set(ktrap_index, proc, 0x8, 0, IDT_ATTRIB_GATE_LONG_TRAP, 0, 1);
 	ktrap_index++;
 }
 
@@ -166,11 +163,11 @@ void interrupts_register_all(void){
 	sp_idt_set_ktrap(&ex_vmmcomexception);
 	sp_idt_set_ktrap(&ex_securityexception);
 	for(int i = 32; i < 0x80; i++){
-		idt_set(i, &nu_unknowninterrupt, 0x8, 0, KTRAP_INT);
+		idt_set(i, &nu_unknowninterrupt, 0x8, 0, IDT_ATTRIB_GATE_LONG_TRAP, 0, 1);
 	}
-	idt_set(0x80, &in_syscallinterrupt, 0x8, 0, KINT_INT);
+	idt_set(0x80, &in_syscallinterrupt, 0x8, 0, IDT_ATTRIB_GATE_LONG_INTERUPT, 3, 1);
 	for(int i = 0x81; i < 256; i++){
-		idt_set(i, &nu_unknowninterrupt, 0x8, 0, KTRAP_INT);
+		idt_set(i, &nu_unknowninterrupt, 0x8, 0, IDT_ATTRIB_GATE_LONG_TRAP, 0, 1);
 	}
 }
 

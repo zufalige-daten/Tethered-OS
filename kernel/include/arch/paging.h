@@ -33,5 +33,8 @@
 
 #define VPAGE_SIZE
 
-extern void allocate_page(void *paddr, void *vaddr, uint64_t attributes, uint8_t table_level);
+extern int vallocate_page_4k(void *paddr, void *vaddr, uint64_t attributes);
+extern int vallocate_page_2M(void *paddr, void *vaddr, uint64_t attributes);
+extern int vallocate_page_1G(void *paddr, void *vaddr, uint64_t attributes);
+extern int vdeallocate_page(void *vaddr);
 

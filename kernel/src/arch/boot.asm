@@ -30,6 +30,8 @@ section .bss
 	stack_top:
 	align 4096
 	kernel_pml4_map: resb 4096
+	align 4096
 	kernel_pml3_map_n: resb 256*512*8
+	align 4096
 	kernel_pml2_map_1: resb 4096
 

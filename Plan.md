@@ -18,14 +18,15 @@ Can save register state for a specific process.
 Can switch out of a process.
 
 proc/process.c, proc/process.h:
-    extern ProcessID proc_process(ProcessID parent, ProcessSections process_sections, ProcessFlags flags);
-    extern void proc_kill(ProcessID pid);
-    extern void proc_enter(ProcessID pid);
-    extern void proc_cleanup(ProcessID pid);
+    extern pid_t pCreate(pid_t parent, psects_t process_sections, pflags_t flags);
+    extern void pKill(pid_t pid);
+    extern void pCleanup(pid_t pid);
+    extern void pEnter(pid_t pid);
 
 arch/CFG_ARCH/proc/process_switching.asm, proc/process.h:
-    extern void proc_leave();
-    extern void proc_save_state();
+    extern void pLeave();
+    extern void pSave();
+    extern void pLoad(pid_t pid);
 
 ### Task Manager -> arch/CFG_ARCH/proc/tss.h, arch/CFG_ARCH/proc/tasks.h.
 
@@ -55,9 +56,9 @@ Can store allocated page-arrays within a hash map.
 Can query the hash map, to allocate new page-arrays within unused gaps, to deallocate old page-arrays.
 
 mem/palloc.c, mem/palloc.h:
-    extern PAllocArea *palloc_reserve(void *pptr);
-    extern void palloc_delete(PAllocArea *palloc_area);
-    extern PAllocArea *palloc_area(size_t n);
+    extern parea_t *paReserve(void *pptr);
+    extern void paDelete(parea_t *palloc_area);
+    extern parea_t *paAlloc(size_t len);
 
 ### Virtual Memory Manager -> arch/CFG_ARCH/mem/valloc.h
 
@@ -73,9 +74,9 @@ Can store allocated pages within a hash map.
 Can query the hash map, to allocate new pages within unused areas, to deallocated old pages.
 
 arch/CFG_ARCH/mem/valloc.c, arch/CFG_ARCH/mem/valloc.h:
-    extern VAllocArea *valloc_reserve(void *vptr, PAllocArea *area, PageTable page_table, VAllocFlags flags);
-    extern void valloc_delete(VAllocArea *valloc_area);
-    extern VAllocArea *valloc_area(PAllocArea *area, PageTable page_table, VAllocFlags flags);
+    extern varea_t *vaReserve(void *vptr, parea_t *area, ptab_t page_table, vaflags_t flags);
+    extern void vaDelete(varea_t *valloc_area);
+    extern varea_t *vaAlloc(parea_t *area, ptab_t page_table, vaflags_t flags);
 
 ### Combined Memory Manager -> mem/pvalloc.h
 
@@ -88,8 +89,8 @@ Headers:
 Can allocate contiguous pages, for a given page table, using flags.
 
 mem/pvalloc.c, mem/pvalloc.h:
-    extern void *pvalloc(size_t n, PageTable page_table, VAllocFlags flags);
-    extern void pvfree(void *vptr);
+    extern void *pvAlloc(size_t len, ptab_t page_table, pvflags_t flags);
+    extern void pvFree(void *vptr);
 
 ### Kernel Memory Manager -> mem/hmalloc.h
 
@@ -103,12 +104,8 @@ Can allocate arbitrary sized data within kernel page table.
 Can allocate arbitrary sized data within some given usermode page table.
 
 mem/hmalloc.c, mem/hmalloc.h:
-    extern void *malloc(size_t size);
-    extern void *umalloc(size_t size, ProcessID pid);
-    extern void free(void *ptr);
-    extern void ufree(void *ptr, ProcessID pid);
-    extern void *realloc(void *ptr, size_t size);
-    extern void *urealloc(void *ptr, size_t size, ProcessID pid);
-    extern void *reallocarray(void *ptr, size_t n, size_t size);
-    extern void *ureallocarray(void *ptr, size_t n, size_t size, ProcessID pid);
+    extern void *hMalloc(size_t size);
+    extern void *hpMalloc(size_t size, pid_t pid);
+    extern void hFree(void *ptr);
+    extern void hpFree(void *ptr, pid_t pid);
 

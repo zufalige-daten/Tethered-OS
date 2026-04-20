@@ -1,5 +1,15 @@
 # Kernel
 
+Must have:
+
+Architecture agnostic sources and headers /// AAS.
+Architecture independant sources and headers (interfaces yowards architecture dependancies) /// AIS.
+Architecture dependant sources and headers (modified per each architecture) // ADS.
+
+AAS::_root
+AIS::_root
+ADS::_root/arch/CFG_ARCH/
+
 ## Process Manager
 
 ### High Level Proccess Manager -> proc/process.h
@@ -105,7 +115,5 @@ Can allocate arbitrary sized data within some given usermode page table.
 
 mem/hmalloc.c, mem/hmalloc.h:
     extern void *hMalloc(size_t size);
-    extern void *hpMalloc(size_t size, pid_t pid);
     extern void hFree(void *ptr);
-    extern void hpFree(void *ptr, pid_t pid);
 
